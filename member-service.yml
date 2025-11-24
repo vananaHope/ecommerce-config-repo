@@ -1,0 +1,9 @@
+# member-service의 모든 프로파일에 적용될 설정
+server:
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, refresh # 'refresh' 엔드포인트 노출 (05.04절)
