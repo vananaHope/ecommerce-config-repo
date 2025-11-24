@@ -1,0 +1,65 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+
+      httpclient:
+        response-timeout: 5000
+        connect-timeout: 1000
+
+      default-filters:
+        - AuthenticationFilter
+      routes:
+        - id: member-service-route
+          uri: lb://MEMBER-SERVICE
+          predicates:
+            - Path=/api/v1/members/**
+          filters:
+            - name: AddRequestHeader
+              args:
+                name: X-Request-Source
+                value: gateway-service
+            - AddResponseHeader=X-Response-Source, gateway-service
+
+        - id: product-service-route
+          uri: lb://PRODUCT-SERVICE
+          predicates:
+            - Path=/api/v1/products/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3 # 재시도 횟수
+                statuses: # 2. 어떤 HTTP 상태 코드일 때 재시도할 것인가?
+                  - BAD_GATEWAY
+                  - SERVICE_UNAVAILABLE
+                  - GATEWAY_TIMEOUT
+                methods: # 3. 어떤 HTTP 메서드에만 재시도할 것인가?
+                  - GET  # 멱등성(Idempotent)이 보장되는 GET, HEAD, OPTIONS 등
+                backoff: # 4. 재시도 간격 설정 (Exponential Backoff)
+                  - firstBackoff: 100ms # 첫 시도까지 100ms 대기
+                  - maxBackoff: 500ms   # 최대 500ms까지 늘어남
+                  - factor: 2           # 대기 시간을 2배씩 증가 (100ms -> 200ms -> 400ms)
+                  - basedOnPreviousValue: true
+
+        - id: order-service-route
+          uri: lb://ORDER-SERVICE
+          predicates:
+            - Path=/api/v1/orders/**
+          metadata:
+            response-timeout: 10000
+            connect-timeout: 2000
+
+jwt:
+  secret: 'ecf7f8cfeb3c3c96d4f146fefd33ae88'
+
+security:
+  required-roles:
+    - path: /api/v1/admin/**
+      role: ADMIN
+    - path: /api/v1/orders/**
+      role: USER
