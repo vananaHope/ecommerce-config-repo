@@ -2,6 +2,9 @@
 server:
   port: 8081
 
+member:
+  greeting: "Hello, Default Member!" # 기본 인사말
+
 management:
   endpoints:
     web:
